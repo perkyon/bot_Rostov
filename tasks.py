@@ -1,105 +1,118 @@
-from datetime import datetime
+import logging
+import datetime
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# Полный список задач
 tasks = {
     "daily": [
-        ("08:00", "Включить музыку на улице"),
-        ("09:30", "Фото витрины"),
-        ("16:30", "Фото витрины"),
-        ("00:39", "Включить проектор и гирлянду"),
-        ("00:52", "Составить список на заказ на завтра")
+        {"time": "08:00", "task": "Включить музыку на улице", "is_completed": False},
+        {"time": "09:30", "task": "Фото витрины", "is_completed": False},
+        {"time": "16:30", "task": "Фото витрины", "is_completed": False},
+        {"time": "18:00", "task": "Включить проектор и гирлянду", "is_completed": False},
+        {"time": "18:30", "task": "Составить список на заказ на завтра", "is_completed": False}
     ],
     "weekly": {
-        "monday": [
-            ("12:30", "Чистка кружек изнутри (замочить белые кружки средством и оттереть изнутри от налета и пятен)"),
-            ("12:30", "Замачивание маленьких питчеров кафизой"),
-            ("12:30", "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера"),
-            ("17:30", "Чистка кружек изнутри (замочить белые кружки средством и оттереть изнутри от налета и пятен)"),
-            ("17:30", "Замачивание маленьких питчеров кафизой"),
-            ("17:30", "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера")
+        "mon": [
+            {"time": "12:30", "task": "Чистка кружек изнутри (замочить белые кружки средством и оттереть изнутри от налета и пятен)", "is_completed": False},
+            {"time": "12:30", "task": "Замачивание маленьких питчеров кафизой", "is_completed": False},
+            {"time": "12:30", "task": "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера", "is_completed": False},
+            {"time": "17:30", "task": "Чистка кружек изнутри (замочить белые кружки средством и оттереть изнутри от налета и пятен)", "is_completed": False},
+            {"time": "17:30", "task": "Замачивание маленьких питчеров кафизой", "is_completed": False},
+            {"time": "17:30", "task": "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера", "is_completed": False}
         ],
-        "tuesday": [
-            ("12:30", "Чистка молок"),
-            ("12:30", "Помыть все холодильники изнутри"),
-            ("17:30", "Чистка молок"),
-            ("17:30", "Помыть все холодильники изнутри")
+        "tue": [
+            {"time": "12:30", "task": "Чистка молок", "is_completed": False},
+            {"time": "12:30", "task": "Помыть все холодильники изнутри", "is_completed": False},
+            {"time": "17:30", "task": "Чистка молок", "is_completed": False},
+            {"time": "17:30", "task": "Помыть все холодильники изнутри", "is_completed": False}
         ],
-        "wednesday": [
-            ("12:30", "Чистка духовки"),
-            ("12:30", "Замачивание и чистка блендера кафизой"),
-            ("12:30", "Замачивание чайников"),
-            ("17:30", "Чистка духовки"),
-            ("17:30", "Замачивание и чистка блендера кафизой"),
-            ("23:32", "Замачивание чайников")
+        "wed": [
+            {"time": "12:30", "task": "Чистка духовки", "is_completed": False},
+            {"time": "12:30", "task": "Замачивание и чистка блендера кафизой", "is_completed": False},
+            {"time": "12:30", "task": "Замачивание чайников", "is_completed": False},
+            {"time": "17:30", "task": "Чистка духовки", "is_completed": False},
+            {"time": "17:30", "task": "Замачивание и чистка блендера кафизой", "is_completed": False},
+            {"time": "12:32", "task": "Замачивание чайников", "is_completed": False}
         ],
-        "thursday": [
-            ("00:53", "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера"),
-            ("00:53", "Почистить морозилку, поменять все бумажки внутри"),
-            ("17:30", "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера"),
-            ("17:30", "Почистить морозилку, поменять все бумажки внутри")
+        "thu": [
+            {"time": "12:30", "task": "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера", "is_completed": False},
+            {"time": "12:30", "task": "Почистить морозилку, поменять все бумажки внутри", "is_completed": False},
+            {"time": "17:30", "task": "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера", "is_completed": False},
+            {"time": "17:30", "task": "Почистить морозилку, поменять все бумажки внутри", "is_completed": False}
         ],
-        "friday": [
-            ("12:30", "Чистка гейзеров"),
-            ("12:30", "Протереть все основы и сиропы"),
-            ("12:30", "Разобрать витрину, помыть изнутри, помыть и протереть подложки"),
-            ("17:30", "Чистка гейзеров"),
-            ("17:30", "Протереть все основы и сиропы"),
-            ("17:30", "Разобрать витрину, помыть изнутри, помыть и протереть подложки")
+        "fri": [
+            {"time": "12:30", "task": "Чистка гейзеров", "is_completed": False},
+            {"time": "12:30", "task": "Протереть все основы и сиропы", "is_completed": False},
+            {"time": "12:30", "task": "Разобрать витрину, помыть изнутри, помыть и протереть подложки", "is_completed": False},
+            {"time": "17:30", "task": "Чистка гейзеров", "is_completed": False},
+            {"time": "17:30", "task": "Протереть все основы и сиропы", "is_completed": False},
+            {"time": "17:30", "task": "Разобрать витрину, помыть изнутри, помыть и протереть подложки", "is_completed": False}
         ],
-        "saturday": [
-            ("12:30", "Чистка молок"),
-            ("12:30", "Уборка на складе (расставить всю продукцию по местам, подмести и помыть полы, перебрать морозилки)"),
-            ("17:30", "Чистка молок"),
-            ("17:30", "Уборка на складе (расставить всю продукцию по местам, подмести и помыть полы, перебрать морозилки)")
+        "sat": [
+            {"time": "12:30", "task": "Чистка молок", "is_completed": False},
+            {"time": "12:30", "task": "Уборка на складе (расставить всю продукцию по местам, подмести и помыть полы, перебрать морозилки)", "is_completed": False},
+            {"time": "17:30", "task": "Чистка молок", "is_completed": False},
+            {"time": "17:30", "task": "Уборка на складе (расставить всю продукцию по местам, подмести и помыть полы, перебрать морозилки)", "is_completed": False}
         ],
-        "sunday": [
-            ("12:30", "Чистка гриля с антижиром"),
-            ("12:30", "Замачивание термосов кафизой"),
-            ("17:30", "Чистка гриля с антижиром"),
-            ("17:30", "Замачивание термосов кафизой")
+        "sun": [
+            {"time": "12:30", "task": "Чистка гриля с антижиром", "is_completed": False},
+            {"time": "12:30", "task": "Замачивание термосов кафизой", "is_completed": False},
+            {"time": "17:30", "task": "Чистка гриля с антижиром", "is_completed": False},
+            {"time": "17:30", "task": "Замачивание термосов кафизой", "is_completed": False}
         ]
     },
     "monthly": {
-        "02": [
-            ("00:52", "Замена фильтров")
+        "15": [
+            {"time": "12:30", "task": "Замена фильтров", "is_completed": False}
         ],
         "30": [
-            ("12:30", "Замена фильтров")
+            {"time": "12:30", "task": "Замена фильтров", "is_completed": False}
         ]
     }
 }
 
-def get_tasks_for_today(completed_tasks):
-    today = datetime.now()
-    day_name = today.strftime("%A").lower()
+def get_tasks_for_today():
+    """Получить задачи на сегодня с учетом даты и времени."""
+    today = datetime.datetime.now()
+    day_name = today.strftime("%a").lower()[:3]  # "mon", "tue", ...
     date = str(today.day)
-    current_time = today.strftime("%H:%M")
-
     today_tasks = []
 
     # Ежедневные задачи
-    for time, task in tasks["daily"]:
-        if (time, task) not in completed_tasks and time >= current_time:
-            today_tasks.append((time, task))
+    today_tasks.extend(tasks["daily"])
 
-    # Задачи по дням недели
+    # Еженедельные задачи
     if day_name in tasks["weekly"]:
-        for time, task in tasks["weekly"][day_name]:
-            if (time, task) not in completed_tasks and time >= current_time:
-                today_tasks.append((time, task))
+        today_tasks.extend(tasks["weekly"][day_name])
 
-    # Задачи по датам
+    # Ежемесячные задачи
     if date in tasks["monthly"]:
-        for time, task in tasks["monthly"][date]:
-            if (time, task) not in completed_tasks and time >= current_time:
-                today_tasks.append((time, task))
+        today_tasks.extend(tasks["monthly"][date])
 
-    # Возвращаем список задач
     return today_tasks
 
-def mark_task_completed(task_id, completed_tasks):
-    today_tasks = get_tasks_for_today(completed_tasks)
-    if task_id < len(today_tasks):
-        completed_tasks.append(today_tasks[task_id])
-        return True
-    return False
+
+def mark_task_completed(task_id):
+    """Отметить задачу как выполненную."""
+    today_tasks = get_tasks_for_today()
+    if 0 <= task_id < len(today_tasks):
+        today_tasks[task_id]["is_completed"] = True
+        return today_tasks[task_id]
+    return None
+
+
+async def send_notification(bot, chat_id, task):
+    """Функция для отправки уведомлений."""
+    await bot.send_message(chat_id, f"Напоминание: {task['task']}")
+
+
+def schedule_tasks(scheduler: AsyncIOScheduler, bot, chat_id):
+    """Запланировать задачи через APScheduler."""
+    for task in tasks["daily"]:
+        hour, minute = map(int, task["time"].split(":"))
+        scheduler.add_job(
+            send_notification,
+            "cron",
+            hour=hour,
+            minute=minute,
+            args=[bot, chat_id, task],
+        )
