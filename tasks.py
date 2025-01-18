@@ -5,8 +5,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 tasks = {
     "daily": [
         {"time": "08:00", "task": "Включить музыку на улице", "is_completed": False},
-        {"time": "09:30", "task": "Фото витрины", "is_completed": False},
-        {"time": "16:30", "task": "Фото витрины", "is_completed": False},
+        {"time": "08:00", "task": "Фото витрины", "is_completed": False},
+        {"time": "11:00", "task": "Фото витрины", "is_completed": False},
+        {"time": "15:00", "task": "Фото витрины", "is_completed": False},
+        {"time": "19:00", "task": "Фото витрины", "is_completed": False},
+        {"time": "21:00", "task": "Фото витрины", "is_completed": False},
         {"time": "18:00", "task": "Включить проектор и гирлянду", "is_completed": False},
         {"time": "18:30", "task": "Составить список на заказ на завтра", "is_completed": False}
     ],
@@ -37,7 +40,7 @@ tasks = {
             {"time": "12:30", "task": "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера", "is_completed": False},
             {"time": "12:30", "task": "Почистить морозилку, поменять все бумажки внутри", "is_completed": False},
             {"time": "17:30", "task": "Протереть зону винила, лимонадов, продукции и батончиков, протереть лампы по залу и все предметы интерьера", "is_completed": False},
-            {"time": "17:30", "task": "Почистить морозилку, поменять все бумажки внутри", "is_completed": False}
+            {"time": "17:30", "task": "Протереть за зоной фуд помыть подставку для фруктов, выдвинуть холодильники на баре, помыть полы под ними", "is_completed": False}
         ],
         "fri": [
             {"time": "12:30", "task": "Чистка гейзеров", "is_completed": False},
