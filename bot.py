@@ -79,10 +79,16 @@ async def complete_task(callback_query: CallbackQuery):
     task = mark_task_completed(task_id)
 
     if task:
-        await callback_query.message.edit_text(
-            f"🕒 {task['time']} — {task['task']} ✅ Выполнено"
-        )
-        await callback_query.answer("Задача отмечена как выполненная!")
+        # Получаем текущий текст сообщения
+        current_text = callback_query.message.text
+        new_text = f"🕒 {task['time']} — {task['task']} ✅ Выполнено"
+
+        # Проверяем, изменился ли текст
+        if current_text != new_text:
+            await callback_query.message.edit_text(new_text)
+            await callback_query.answer("Задача отмечена как выполненная!")
+        else:
+            await callback_query.answer("Задача уже была отмечена как выполненная.")
     else:
         await callback_query.answer("Задача не найдена.", show_alert=True)
 

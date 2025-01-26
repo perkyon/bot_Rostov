@@ -79,10 +79,11 @@ _last_checked_date = None  # Переменная для хранения дат
 
 def reset_task_status():
     """Сбрасываем статус выполненных задач."""
-    for task_list in tasks.values():
-        if isinstance(task_list, list):
-            for task in task_list:
-                task["is_completed"] = False
+    for key in ["daily", "weekly", "monthly"]:
+        if key in tasks:
+            for task_list in tasks[key].values() if key != "daily" else tasks[key]:
+                for task in task_list:
+                    task["is_completed"] = False
 
 
 def get_tasks_for_today():
@@ -95,8 +96,19 @@ def get_tasks_for_today():
         reset_task_status()
         _last_checked_date = today
 
-    # Возвращаем список задач (на сегодня, ежедневные и другие)
+    # Возвращаем список задач (на сегодня, ежедневные, еженедельные и ежемесячные)
     today_tasks = tasks["daily"]
+
+    # Добавляем еженедельные задачи
+    day_name = today.strftime("%a").lower()[:3]  # Например, "mon", "tue", ...
+    if day_name in tasks["weekly"]:
+        today_tasks.extend(tasks["weekly"][day_name])
+
+    # Добавляем ежемесячные задачи
+    day_of_month = str(today.day)  # Например, "15"
+    if day_of_month in tasks["monthly"]:
+        today_tasks.extend(tasks["monthly"][day_of_month])
+
     return today_tasks
 
 
@@ -104,26 +116,38 @@ def mark_task_completed(task_id):
     """Отметить задачу как выполненную."""
     today_tasks = get_tasks_for_today()
     if 0 <= task_id < len(today_tasks):
-        today_tasks[task_id]["is_completed"] = True
-        return today_tasks[task_id]
+        task = today_tasks[task_id]
+        task["is_completed"] = True
+
+        # Ищем задачу в оригинальной структуре для обновления
+        for task_list in tasks.values():
+            if isinstance(task_list, list) and task in task_list:
+                task["is_completed"] = True
+
+        return task
     return None
 
 
 async def send_notification(bot, chat_id, task):
     """Функция для отправки уведомлений."""
-    await bot.send_message(chat_id, f"Напоминание: {task['task']}")
-
+    try:
+        await bot.send_message(chat_id, f"Напоминание: {task['task']}")
+    except Exception as e:
+        logging.error(f"Ошибка при отправке уведомления для задачи {task}: {e}")
 
 def schedule_tasks(scheduler: AsyncIOScheduler, bot, chat_id):
     """Запланировать задачи через APScheduler."""
     timezone = pytz.timezone("Europe/Moscow")  # Указываем часовой пояс
     for task in tasks["daily"]:
-        hour, minute = map(int, task["time"].split(":"))
-        scheduler.add_job(
-            send_notification,
-            "cron",
-            hour=hour,
-            minute=minute,
-            args=[bot, chat_id, task],
-            timezone=timezone,
-        )
+        try:
+            hour, minute = map(int, task["time"].split(":"))
+            scheduler.add_job(
+                send_notification,
+                "cron",
+                hour=hour,
+                minute=minute,
+                args=[bot, chat_id, task],
+                timezone=timezone,
+            )
+        except Exception as e:
+            logging.error(f"Не удалось запланировать задачу {task}: {e}")
