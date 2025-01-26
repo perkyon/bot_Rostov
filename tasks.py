@@ -79,53 +79,65 @@ _last_checked_date = None  # Переменная для хранения дат
 
 def reset_task_status():
     """Сбрасываем статус выполненных задач."""
-    for key in ["daily", "weekly", "monthly"]:
-        if key in tasks:
-            for task_list in tasks[key].values() if key != "daily" else tasks[key]:
-                for task in task_list:
+    for key, task_list in tasks.items():
+        # Убедимся, что task_list — это список или словарь списков
+        if isinstance(task_list, list):
+            # Обработка списка задач
+            for task in task_list:
+                if isinstance(task, dict) and "is_completed" in task:
                     task["is_completed"] = False
+        elif isinstance(task_list, dict):
+            # Обработка вложенного словаря (например, weekly, monthly)
+            for sub_task_list in task_list.values():
+                if isinstance(sub_task_list, list):
+                    for task in sub_task_list:
+                        if isinstance(task, dict) and "is_completed" in task:
+                            task["is_completed"] = False
 
 
 def get_tasks_for_today():
-    """Получить задачи на сегодня с учетом даты и времени."""
+    """Получить задачи, которые прошли и ближайшие до 15:30."""
     global _last_checked_date
-    today = datetime.datetime.now().date()
+    today = datetime.datetime.now()
+    current_time = today.time()
+    cutoff_time = datetime.time(15, 30)  # Время окончания
 
-    # Если день изменился, сбрасываем выполненные задачи
-    if _last_checked_date != today:
+    if _last_checked_date != today.date():
         reset_task_status()
-        _last_checked_date = today
+        _last_checked_date = today.date()
 
-    # Возвращаем список задач (на сегодня, ежедневные, еженедельные и ежемесячные)
-    today_tasks = tasks["daily"]
+    # Список для хранения уникальных задач
+    unique_tasks = []
+    task_ids = set()  # Для отслеживания уникальности задач
 
-    # Добавляем еженедельные задачи
-    day_name = today.strftime("%a").lower()[:3]  # Например, "mon", "tue", ...
+    # Фильтрация задач
+    def filter_task(task_time):
+        task_time_obj = datetime.datetime.strptime(task_time, "%H:%M").time()
+        return task_time_obj <= current_time or task_time_obj <= cutoff_time
+
+    # Обработка ежедневных задач
+    for task in tasks["daily"]:
+        if task["task"] not in task_ids and filter_task(task["time"]):
+            unique_tasks.append(task)
+            task_ids.add(task["task"])
+
+    # Обработка еженедельных задач
+    day_name = today.strftime("%a").lower()[:3]
     if day_name in tasks["weekly"]:
-        today_tasks.extend(tasks["weekly"][day_name])
+        for task in tasks["weekly"][day_name]:
+            if task["task"] not in task_ids and filter_task(task["time"]):
+                unique_tasks.append(task)
+                task_ids.add(task["task"])
 
-    # Добавляем ежемесячные задачи
-    day_of_month = str(today.day)  # Например, "15"
+    # Обработка ежемесячных задач
+    day_of_month = str(today.day)
     if day_of_month in tasks["monthly"]:
-        today_tasks.extend(tasks["monthly"][day_of_month])
+        for task in tasks["monthly"][day_of_month]:
+            if task["task"] not in task_ids and filter_task(task["time"]):
+                unique_tasks.append(task)
+                task_ids.add(task["task"])
 
-    return today_tasks
-
-
-def mark_task_completed(task_id):
-    """Отметить задачу как выполненную."""
-    today_tasks = get_tasks_for_today()
-    if 0 <= task_id < len(today_tasks):
-        task = today_tasks[task_id]
-        task["is_completed"] = True
-
-        # Ищем задачу в оригинальной структуре для обновления
-        for task_list in tasks.values():
-            if isinstance(task_list, list) and task in task_list:
-                task["is_completed"] = True
-
-        return task
-    return None
+    return unique_tasks
 
 
 async def send_notification(bot, chat_id, task):

@@ -4,7 +4,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from tasks import schedule_tasks, get_tasks_for_today, mark_task_completed
+from tasks import schedule_tasks, get_tasks_for_today
 
 # Настройка логирования
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -35,7 +35,7 @@ async def start_command(message: types.Message):
 async def tasks_command(message: types.Message):
     tasks = get_tasks_for_today()
     if not tasks:
-        await message.answer("На сегодня задач нет!")
+        await message.answer("Задач, соответствующих времени, нет!")
         return
 
     for i, task in enumerate(tasks):
@@ -76,22 +76,19 @@ async def help_command(message: types.Message):
 @dp.callback_query(lambda c: c.data.startswith("complete_"))
 async def complete_task(callback_query: CallbackQuery):
     task_id = int(callback_query.data.split("_")[1])
-    task = mark_task_completed(task_id)
+    tasks = get_tasks_for_today()
 
-    if task:
-        # Получаем текущий текст сообщения
-        current_text = callback_query.message.text
-        new_text = f"🕒 {task['time']} — {task['task']} ✅ Выполнено"
-
-        # Проверяем, изменился ли текст
-        if current_text != new_text:
+    if 0 <= task_id < len(tasks):
+        task = tasks[task_id]
+        if not task["is_completed"]:
+            task["is_completed"] = True
+            new_text = f"🕒 {task['time']} — {task['task']} ✅ Выполнено"
             await callback_query.message.edit_text(new_text)
             await callback_query.answer("Задача отмечена как выполненная!")
         else:
-            await callback_query.answer("Задача уже была отмечена как выполненная.")
+            await callback_query.answer("Задача уже была выполнена.")
     else:
         await callback_query.answer("Задача не найдена.", show_alert=True)
-
 
 # Основная функция
 async def main():
