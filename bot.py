@@ -18,18 +18,19 @@ scheduler = AsyncIOScheduler()
 CHAT_ID = None  # ID чата пользователя
 
 
-# Обработчик команды /start
+# Команда /start
 @dp.message(Command("start"))
 async def start_command(message: types.Message):
     global CHAT_ID
     CHAT_ID = message.chat.id
     await message.answer(
-        "Привет! Я бот для напоминаний.\n"
-        "Используй /tasks, чтобы увидеть задачи на сегодня."
+        "Привет! Я бот для напоминаний. Используй /tasks, чтобы увидеть задачи на сегодня."
     )
+    # Запланируем задачи при запуске
+    schedule_tasks(scheduler, bot, CHAT_ID)
+    scheduler.start()
 
-
-# Обработчик команды /tasks
+# Команда /tasks
 @dp.message(Command("tasks"))
 async def tasks_command(message: types.Message):
     tasks = get_tasks_for_today()
@@ -39,18 +40,13 @@ async def tasks_command(message: types.Message):
 
     for i, task in enumerate(tasks):
         status = "✅ Выполнено" if task["is_completed"] else "🔄 Не выполнено"
-        # Исправление создания клавиатуры
         keyboard = InlineKeyboardMarkup(
             inline_keyboard=[
-                [
-                    InlineKeyboardButton(text=status, callback_data=f"complete_{i}")
-                ]
+                [InlineKeyboardButton(text=status, callback_data=f"complete_{i}")]
             ]
         )
-        await message.answer(
-            f"🕒 {task['time']} — {task['task']}",
-            reply_markup=keyboard
-        )
+        await message.answer(f"🕒 {task['time']} — {task['task']}", reply_markup=keyboard)
+
 
 @dp.message(Command("help"))
 async def help_command(message: types.Message):
@@ -76,7 +72,7 @@ async def help_command(message: types.Message):
         parse_mode="Markdown"
     )
 
-# Обработчик нажатия на кнопки
+# Обработка нажатий на кнопки
 @dp.callback_query(lambda c: c.data.startswith("complete_"))
 async def complete_task(callback_query: CallbackQuery):
     task_id = int(callback_query.data.split("_")[1])
@@ -94,14 +90,12 @@ async def complete_task(callback_query: CallbackQuery):
 # Основная функция
 async def main():
     if CHAT_ID is None:
-        logging.warning("CHAT_ID не установлен. Задачи не будут запланированы.")
+        print("CHAT_ID не установлен. Запустите команду /start.")
     else:
         schedule_tasks(scheduler, bot, CHAT_ID)
-
-    scheduler.start()
-    logging.info("Планировщик запущен.")
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
+    import asyncio
     asyncio.run(main())

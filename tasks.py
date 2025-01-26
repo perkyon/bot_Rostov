@@ -1,5 +1,6 @@
 import logging
 import datetime
+import pytz
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 tasks = {
@@ -73,24 +74,29 @@ tasks = {
     }
 }
 
+_last_checked_date = None  # Переменная для хранения даты последнего обновления
+
+
+def reset_task_status():
+    """Сбрасываем статус выполненных задач."""
+    for task_list in tasks.values():
+        if isinstance(task_list, list):
+            for task in task_list:
+                task["is_completed"] = False
+
+
 def get_tasks_for_today():
     """Получить задачи на сегодня с учетом даты и времени."""
-    today = datetime.datetime.now()
-    day_name = today.strftime("%a").lower()[:3]  # "mon", "tue", ...
-    date = str(today.day)
-    today_tasks = []
+    global _last_checked_date
+    today = datetime.datetime.now().date()
 
-    # Ежедневные задачи
-    today_tasks.extend(tasks["daily"])
+    # Если день изменился, сбрасываем выполненные задачи
+    if _last_checked_date != today:
+        reset_task_status()
+        _last_checked_date = today
 
-    # Еженедельные задачи
-    if day_name in tasks["weekly"]:
-        today_tasks.extend(tasks["weekly"][day_name])
-
-    # Ежемесячные задачи
-    if date in tasks["monthly"]:
-        today_tasks.extend(tasks["monthly"][date])
-
+    # Возвращаем список задач (на сегодня, ежедневные и другие)
+    today_tasks = tasks["daily"]
     return today_tasks
 
 
@@ -110,6 +116,7 @@ async def send_notification(bot, chat_id, task):
 
 def schedule_tasks(scheduler: AsyncIOScheduler, bot, chat_id):
     """Запланировать задачи через APScheduler."""
+    timezone = pytz.timezone("Europe/Moscow")  # Указываем часовой пояс
     for task in tasks["daily"]:
         hour, minute = map(int, task["time"].split(":"))
         scheduler.add_job(
@@ -118,4 +125,5 @@ def schedule_tasks(scheduler: AsyncIOScheduler, bot, chat_id):
             hour=hour,
             minute=minute,
             args=[bot, chat_id, task],
+            timezone=timezone,
         )
